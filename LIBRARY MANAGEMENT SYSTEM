@@ -1,0 +1,184 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <ctime>
+
+class Book {
+public:
+    std::string title;
+    std::string author;
+    std::string isbn;
+    bool isAvailable;
+
+    Book(std::string t, std::string a, std::string i) : title(t), author(a), isbn(i), isAvailable(true) {}
+};
+
+class Borrower {
+public:
+    std::string name;
+    int borrowerID;
+
+    Borrower(std::string n, int id) : name(n), borrowerID(id) {}
+};
+
+class Transaction {
+public:
+    std::string isbn;
+    int borrowerID;
+    time_t checkoutDate;
+    time_t returnDate;
+    bool isReturned;
+
+    Transaction(std::string i, int id, time_t cd) : isbn(i), borrowerID(id), checkoutDate(cd), isReturned(false) {}
+};
+std::vector<Book> bookDatabase;
+void searchBookByTitle(const std::string& title) {
+    for (const auto& book : bookDatabase) {
+        if (book.title.find(title) != std::string::npos) {
+            std::cout << "Found: " << book.title << " by " << book.author << " ISBN: " << book.isbn << std::endl;
+        }
+    }
+}
+
+void searchBookByAuthor(const std::string& author) {
+    for (const auto& book : bookDatabase) {
+        if (book.author.find(author) != std::string::npos) {
+            std::cout << "Found: " << book.title << " by " << book.author << " ISBN: " << book.isbn << std::endl;
+        }
+    }
+}
+
+void searchBookByISBN(const std::string& isbn) {
+    for (const auto& book : bookDatabase) {
+        if (book.isbn == isbn) {
+            std::cout << "Found: " << book.title << " by " << book.author << " ISBN: " << book.isbn << std::endl;
+            return;
+        }
+    }
+    std::cout << "No book found with ISBN: " << isbn << std::endl;
+}
+std::vector<Transaction> transactions;
+
+void checkoutBook(const std::string& isbn, int borrowerID) {
+    for (auto& book : bookDatabase) {
+        if (book.isbn == isbn && book.isAvailable) {
+            book.isAvailable = false;
+            time_t now = time(0);
+            transactions.emplace_back(isbn, borrowerID, now);
+            std::cout << "Book checked out successfully.\n";
+            return;
+        }
+    }
+    std::cout << "Book is not available for checkout.\n";
+}
+
+void returnBook(const std::string& isbn, int borrowerID) {
+    for (auto& transaction : transactions) {
+        if (transaction.isbn == isbn && transaction.borrowerID == borrowerID && !transaction.isReturned) {
+            transaction.isReturned = true;
+            transaction.returnDate = time(0);
+            for (auto& book : bookDatabase) {
+                if (book.isbn == isbn) {
+                    book.isAvailable = true;
+                    std::cout << "Book returned successfully.\n";
+                    return;
+                }
+            }
+        }
+    }
+    std::cout << "Transaction not found.\n";
+}
+double calculateFine(time_t checkoutDate, time_t returnDate) {
+    double finePerDay = 1.0; // $1 per day
+    double daysOverdue = difftime(returnDate, checkoutDate) / (60 * 60 * 24) - 14; // Assuming 2-week loan period
+    if (daysOverdue > 0) {
+        return daysOverdue * finePerDay;
+    }
+    return 0.0;
+}
+void userInterface() {
+    while (true) {
+        std::cout << "\nLibrary Management System\n";
+        std::cout << "1. Add Book\n";
+        std::cout << "2. Search Book by Title\n";
+        std::cout << "3. Search Book by Author\n";
+        std::cout << "4. Search Book by ISBN\n";
+        std::cout << "5. Checkout Book\n";
+        std::cout << "6. Return Book\n";
+        std::cout << "7. Calculate Fine\n";
+        std::cout << "8. Exit\n";
+        std::cout << "Enter your choice: ";
+        int choice;
+        std::cin >> choice;
+        std::cin.ignore(); // Ignore newline character
+
+        if (choice == 1) {
+            std::string title, author, isbn;
+            std::cout << "Enter title: ";
+            std::getline(std::cin, title);
+            std::cout << "Enter author: ";
+            std::getline(std::cin, author);
+            std::cout << "Enter ISBN: ";
+            std::getline(std::cin, isbn);
+            bookDatabase.emplace_back(title, author, isbn);
+            std::cout << "Book added successfully.\n";
+        } else if (choice == 2) {
+            std::string title;
+            std::cout << "Enter title: ";
+            std::getline(std::cin, title);
+            searchBookByTitle(title);
+        } else if (choice == 3) {
+            std::string author;
+            std::cout << "Enter author: ";
+            std::getline(std::cin, author);
+            searchBookByAuthor(author);
+        } else if (choice == 4) {
+            std::string isbn;
+            std::cout << "Enter ISBN: ";
+            std::getline(std::cin, isbn);
+            searchBookByISBN(isbn);
+        } else if (choice == 5) {
+            std::string isbn;
+            int borrowerID;
+            std::cout << "Enter ISBN: ";
+            std::getline(std::cin, isbn);
+            std::cout << "Enter Borrower ID: ";
+            std::cin >> borrowerID;
+            std::cin.ignore(); // Ignore newline character
+            checkoutBook(isbn, borrowerID);
+        } else if (choice == 6) {
+            std::string isbn;
+            int borrowerID;
+            std::cout << "Enter ISBN: ";
+            std::getline(std::cin, isbn);
+            std::cout << "Enter Borrower ID: ";
+            std::cin >> borrowerID;
+            std::cin.ignore(); // Ignore newline character
+            returnBook(isbn, borrowerID);
+        } else if (choice == 7) {
+            std::string isbn;
+            int borrowerID;
+            std::cout << "Enter ISBN: ";
+            std::getline(std::cin, isbn);
+            std::cout << "Enter Borrower ID: ";
+            std::cin >> borrowerID;
+            std::cin.ignore(); // Ignore newline character
+            for (const auto& transaction : transactions) {
+                if (transaction.isbn == isbn && transaction.borrowerID == borrowerID && transaction.isReturned) {
+                    double fine = calculateFine(transaction.checkoutDate, transaction.returnDate);
+                    std::cout << "Fine: $" << fine << std::endl;
+                    break;
+                }
+            }
+        } else if (choice == 8) {
+            break;
+        } else {
+            std::cout << "Invalid choice. Please try again.\n";
+        }
+    }
+}
+int main() {
+    userInterface();
+    return 0;
+}
